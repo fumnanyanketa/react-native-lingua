@@ -1,19 +1,16 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import { Text, View } from "react-native";
 
 export default function Index() {
   return (
-    <View className="flex-1 justify-center items-center">
-      <Text className="h1 text-primary">
-        Lingua
-      </Text>
+    <View className="flex-1 items-center justify-center gap-6">
+      <Text className="h1 text-primary">Lingua</Text>
+
+      <Link href="/onboarding" className="rounded-full bg-primary px-8 py-4">
+        <Text className="text-white" style={{ fontFamily: "Poppins-SemiBold", fontSize: 16 }}>
+          Open Onboarding
+        </Text>
+      </Link>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
