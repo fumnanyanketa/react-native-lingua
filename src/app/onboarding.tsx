@@ -117,7 +117,7 @@ export default function Onboarding() {
         {/* Get Started button */}
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={() => router.push("/")}
+          onPress={() => router.push("/sign-up")}
           className="mb-4 flex-row items-center justify-center bg-primary"
           style={{ height: 64, borderRadius: 28 }}
         >
