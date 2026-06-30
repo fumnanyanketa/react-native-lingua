@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,38 +16,77 @@ type VerificationModalProps = {
   visible: boolean;
   email: string;
   onClose: () => void;
-  onComplete: () => void;
+  onSubmitCode: (code: string) => Promise<void>;
+  onResend: () => Promise<void>;
 };
 
 export default function VerificationModal({
   visible,
   email,
   onClose,
-  onComplete,
+  onSubmitCode,
+  onResend,
 }: VerificationModalProps) {
   const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  // Focus the hidden input once the modal has slid into view.
+  // Reset state and focus the input when the sheet opens.
   useEffect(() => {
     if (!visible) return;
-    const timer = setTimeout(() => inputRef.current?.focus(), 350);
+    const timer = setTimeout(() => {
+      setCode("");
+      setError(null);
+      setResent(false);
+      inputRef.current?.focus();
+    }, 350);
     return () => clearTimeout(timer);
   }, [visible]);
 
+  const submit = async (value: string) => {
+    try {
+      setVerifying(true);
+      await onSubmitCode(value);
+    } catch (err) {
+      const e = err as { errors?: Array<{ longMessage?: string; message?: string }> } | null;
+      setError(
+        e?.errors?.[0]?.longMessage ??
+          e?.errors?.[0]?.message ??
+          (err instanceof Error ? err.message : "That code wasn't right. Please try again.")
+      );
+      setCode("");
+      inputRef.current?.focus();
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleChange = (text: string) => {
+    if (verifying) return;
     const digits = text.replace(/[^0-9]/g, "").slice(0, CODE_LENGTH);
     setCode(digits);
+    setError(null);
 
-    // Auto-continue the moment the final digit is entered.
     if (digits.length === CODE_LENGTH) {
       inputRef.current?.blur();
-      setCode("");
-      onComplete();
+      void submit(digits);
+    }
+  };
+
+  const handleResend = async () => {
+    setError(null);
+    try {
+      await onResend();
+      setResent(true);
+    } catch {
+      setError("Couldn't resend the code. Please try again.");
     }
   };
 
   const handleClose = () => {
+    if (verifying) return;
     setCode("");
     onClose();
   };
@@ -63,7 +103,7 @@ export default function VerificationModal({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        {/* Dimmed backdrop — tap to dismiss */}
+        {/* Dimmed backdrop */}
         <Pressable
           style={{ flex: 1, backgroundColor: "rgba(13,19,43,0.45)" }}
           onPress={handleClose}
@@ -107,7 +147,7 @@ export default function VerificationModal({
             {Array.from({ length: CODE_LENGTH }).map((_, index) => {
               const digit = code[index] ?? "";
               const isFilled = digit !== "";
-              const isActive = index === code.length;
+              const isActive = index === code.length && !verifying;
 
               return (
                 <View
@@ -137,11 +177,12 @@ export default function VerificationModal({
             })}
           </Pressable>
 
-          {/* Hidden input that actually captures the keystrokes */}
+          {/* Hidden input that captures keystrokes */}
           <TextInput
             ref={inputRef}
             value={code}
             onChangeText={handleChange}
+            editable={!verifying}
             keyboardType="number-pad"
             maxLength={CODE_LENGTH}
             textContentType="oneTimeCode"
@@ -149,12 +190,31 @@ export default function VerificationModal({
             style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
           />
 
-          <Text className="body-sm text-muted mt-6 text-center">
-            Didn&apos;t get the code?{" "}
-            <Text className="text-primary" style={{ fontFamily: "Poppins-SemiBold" }}>
-              Resend
+          {/* Status: spinner, error, or resend */}
+          {verifying ? (
+            <View className="mt-6 flex-row items-center justify-center">
+              <ActivityIndicator color="#6C4EF5" />
+              <Text className="body-sm text-muted ml-2">Verifying…</Text>
+            </View>
+          ) : error ? (
+            <Text
+              className="body-sm mt-6 text-center"
+              style={{ color: "#FF4D4F" }}
+            >
+              {error}
             </Text>
-          </Text>
+          ) : (
+            <Text className="body-sm text-muted mt-6 text-center">
+              Didn&apos;t get the code?{" "}
+              <Text
+                className="text-primary"
+                style={{ fontFamily: "Poppins-SemiBold" }}
+                onPress={handleResend}
+              >
+                {resent ? "Code sent ✓" : "Resend"}
+              </Text>
+            </Text>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
