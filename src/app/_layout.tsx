@@ -7,6 +7,8 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
+import { useLanguageStore } from "@/store/languageStore";
+
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
@@ -32,20 +34,28 @@ function AuthGate() {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { selectedLanguageId, _hasHydrated } = useLanguageStore();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !_hasHydrated) return;
 
     const firstSegment = segments[0];
     const inPublicRoute =
       firstSegment === "(auth)" || firstSegment === "onboarding";
+    const inLanguageSelection = firstSegment === "language-selection";
 
-    if (isSignedIn && inPublicRoute) {
-      router.replace("/");
-    } else if (!isSignedIn && !inPublicRoute) {
+    if (!isSignedIn && !inPublicRoute) {
       router.replace("/onboarding");
+    } else if (isSignedIn && inPublicRoute) {
+      if (selectedLanguageId) {
+        router.replace("/home");
+      } else {
+        router.replace("/language-selection");
+      }
+    } else if (isSignedIn && !selectedLanguageId && !inLanguageSelection) {
+      router.replace("/language-selection");
     }
-  }, [isLoaded, isSignedIn, segments, router]);
+  }, [isLoaded, _hasHydrated, isSignedIn, segments, selectedLanguageId, router]);
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

@@ -20,6 +20,7 @@ import {
 } from "@/components/icons";
 import { images } from "@/constants/images";
 import { languages } from "@/data/languages";
+import { useLanguageStore } from "@/store/languageStore";
 import type { Language } from "@/types/learning";
 
 function LanguageRow({
@@ -143,7 +144,8 @@ function LanguageRow({
 export default function LanguageSelection() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { selectedLanguageId, setSelectedLanguage } = useLanguageStore();
+  const [selectedId, setSelectedId] = useState<string | null>(selectedLanguageId);
   const [search, setSearch] = useState("");
   const [earthHeight, setEarthHeight] = useState(screenWidth);
 
@@ -269,7 +271,8 @@ export default function LanguageSelection() {
         activeOpacity={selected ? 0.85 : 0.5}
         onPress={() => {
           if (!selected) return;
-          router.back();
+          setSelectedLanguage(selected.id);
+          router.replace("/");
         }}
         style={{
           flexDirection: "row",
